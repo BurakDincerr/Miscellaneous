@@ -1,0 +1,81 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd 
+from datetime import datetime
+
+#ilgili 2.el websitesindeki, ilgili filtredeki aranmak istenen aracın,  Listedeki tüm ilanlarin, ModelYılını, KM, Renk, ve fiyatını webScrapping toolu ile çıkarır dataFrame'e store eder.
+#store ettigi ilan bilgilerinin ozet istatistiklerini cikarip .txt file a yazar. Windows Task Sheduler ile zamanlanabilir. Client makine her startupta calisacak sekilde zamanladım. Elde edilen basit datalar ile PowerBIda dashboard olusturuldu
+
+#ilgili aracin 2.el websitesindeki listeleme URL'i
+url = 'ilgili aracin 2.el websitesindeki listeleme URL girilecek '
+response = requests.get(url)
+
+
+soup=BeautifulSoup(response.content,'html.parser')
+
+
+results = soup.find_all('tr', {'class':'listing-list-item should-hover bg-white'})
+
+# Verileri depolamak için bir liste oluşturma
+data_list = []
+
+
+for row in results:
+    
+    td_tags = row.find_all('td', class_='listing-text')
+    values = [td.find('a').get_text().strip() for td in td_tags]
+    
+    
+    #ListelemeBasligi =results[row].find('div',{'class':'listing-text-new word-break listing-title-lines'}).get_text()
+    ModelYılı =  int(values[0])
+    KM =  int(values[1].replace('.',''))         
+    Renk =  values[2]
+    Fiyat =row.find('span',{'class':'db no-wrap listing-price'}).get_text()
+    Fiyat= Fiyat.strip().replace('TL', '').replace('.', '').strip()
+    Fiyat = int(Fiyat)
+
+
+    data_list.append({
+        'Model Yılı': ModelYılı,
+        'KM': KM,
+        'Renk': Renk,
+        'Fiyat': Fiyat
+        })
+
+
+# Pandas DataFrame oluşturma
+df = pd.DataFrame(data_list)
+
+#Ozet istatiskleriin cikar, min,max,mean,quartiles,std
+ozetistatistik = df.describe()
+
+#ilan bilgilerini TXT dosyasına cıkaracagı PATH. 
+file_path = r'C:\Users\WindowsUserinizGirilecek\Desktop\LeonPiyasa.txt'
+
+
+# Tarih ve saat bilgisini oluşturma
+timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+# DataFrame'i .txt dosyasına ekleme yapma
+with open(file_path, 'a', encoding='utf-8') as file:
+    file.write("\n")
+    # Tarih bilgisini ekleme
+    df.to_csv(file, header=True, index=True, sep='|', mode='a')
+    file.write("\n")
+    file.write("--------------------------OZET ISTATISTIK --------------------------------------------")
+    file.write("\n")
+    ozetistatistik.to_csv(file, header=True, index=True, sep='|', mode='a')
+    file.write(f"\n\nLog Tarihi: {timestamp}\n")
+    file.write("-------------------------------------------------------------------------------------")
+    
+    # DataFrame'i .txt dosyasına yazma
+  
+
+
+
+
+
+
+
+
+
